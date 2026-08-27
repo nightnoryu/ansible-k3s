@@ -19,8 +19,11 @@ cd ansible-k3s
 cp inventory/hosts.example.yml inventory/hosts.yml
 $EDITOR inventory/hosts.yml
 
+# Check connectivity
+ansible all -m ping -i inventory
+
 # Use ansible for operations
-ansible all -m ping -i inventory                                             # check connectivity
-ansible-playbook playbooks/update-system.yml -i inventory --diff             # update system packages
-ansible-playbook playbooks/setup-k3s-control-plane.yml -i inventory --diff   # setup control plane
+ansible-playbook playbooks/update-system.yml -i inventory --diff  # update system packages
+ansible-playbook playbooks/setup-k3s.yml -i inventory --diff      # setup k3s node
+ansible-playbook playbooks/update-k3s.yml -i inventory --diff     # update k3s version
 ```

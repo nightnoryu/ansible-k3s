@@ -1,3 +1,14 @@
+- name: Check current k3s version
+  ansible.builtin.command:
+    cmd: "{{ k3s_bin_path }} --version"
+  register: k3s_current_version
+  check_mode: no
+  changed_when: false
+
+- name: Show current k3s version
+  ansible.builtin.debug:
+    var: k3s_current_version.stdout
+
 - name: Download k3s install script
   ansible.builtin.get_url:
     url: "{{ k3s_install_script_url }}"

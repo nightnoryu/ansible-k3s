@@ -24,4 +24,4 @@
     pre_reboot_delay: 0
     post_reboot_delay: 30
     test_command: uptime
-  when: reboot_required_file.stat.exists
+  when: not ansible_check_mode and reboot_required_file.stat.exist
