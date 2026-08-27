@@ -1,0 +1,5 @@
+- hosts: control-plane
+  gather_facts: yes
+  roles:
+    - configure-ufw
+    - install-k3s

@@ -1,0 +1,19 @@
+- name: Download k3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: /tmp/k3s-install.sh
+    mode: "0755"
+
+- name: Run k3s install script
+  ansible.builtin.command: /tmp/k3s-install.sh
+  args:
+    creates: "{{ k3s_bin_path }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_CHANNEL: "{{ k3s_channel }}"
+
+- name: Ensure k3s service is running
+  ansible.builtin.systemd:
+    name: k3s
+    enabled: true
+    state: started
