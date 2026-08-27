@@ -1,0 +1,12 @@
+- name: Create HelmChartConfig
+  ansible.builtin.template:
+    src: traefik-config.yml
+    dest: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+    mode: '0644'
+
+- name: Wait for traefik rollout
+  ansible.builtin.command:
+    cmd: 'kubectl -n kube-system rollout status deployment/traefik --timeout=5m'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false

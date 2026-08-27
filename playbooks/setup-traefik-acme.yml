@@ -1,0 +1,4 @@
+- hosts: control-plane
+  gather_facts: yes
+  roles:
+    - configure-traefik-acme

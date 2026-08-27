@@ -23,7 +23,8 @@ $EDITOR inventory/hosts.yml
 ansible all -m ping -i inventory
 
 # Use ansible for operations
-ansible-playbook playbooks/update-system.yml -i inventory --diff  # update system packages
-ansible-playbook playbooks/setup-k3s.yml -i inventory --diff      # setup k3s node
-ansible-playbook playbooks/update-k3s.yml -i inventory --diff     # update k3s version
+ansible-playbook playbooks/update-system.yml -i inventory --diff       # update system packages
+ansible-playbook playbooks/setup-k3s.yml -i inventory --diff           # setup k3s node
+ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff  # setup ACME certificate resolver
+ansible-playbook playbooks/update-k3s.yml -i inventory --diff          # update k3s version
 ```
