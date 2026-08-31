@@ -1,5 +1,6 @@
 - hosts: control-plane
   gather_facts: yes
   roles:
+    - update-apt-packages
     - configure-ufw
     - install-k3s
