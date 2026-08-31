@@ -1,6 +1,6 @@
 # Ansible k3s
 
-Platform for automated k3s cluster management.
+Ansible playbooks for provisioning a K3s cluster with Traefik.
 
 ## How to use
 
