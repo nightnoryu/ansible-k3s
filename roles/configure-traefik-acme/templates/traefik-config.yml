@@ -11,18 +11,10 @@ spec:
       accessMode: ReadWriteOnce
       size: 128Mi
       path: /data
-
-    certResolvers:
-      letsencrypt:
-        email: {{ traefik_acme_email }}
-        storage: /data/acme.json
-        httpChallenge:
-          entryPoint: web
-
     additionalArguments:
-      - "--certificatesresolvers.default.acme.email={{ traefik_acme_email }}"
-      - "--certificatesresolvers.default.acme.storage=/data/acme.json"
-      - "--certificatesresolvers.default.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email={{ traefik_acme_email }}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     ports:
       web:
         exposedPort: 80
