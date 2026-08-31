@@ -1,3 +1,4 @@
+---
 - name: Create HelmChartConfig
   ansible.builtin.template:
     src: traefik-config.yml

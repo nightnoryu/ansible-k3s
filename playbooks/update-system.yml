@@ -1,4 +1,5 @@
+---
 - hosts: all
-  gather_facts: yes
+  gather_facts: true
   roles:
     - update-apt-packages

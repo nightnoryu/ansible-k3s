@@ -1,4 +1,5 @@
+---
 - hosts: control-plane
-  gather_facts: yes
+  gather_facts: true
   roles:
     - update-k3s

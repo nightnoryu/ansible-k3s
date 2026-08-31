@@ -1,5 +1,6 @@
+---
 - name: Checking if required variables are defined
-  fail:
+  ansible.builtin.fail:
     msg: "{{ item }} is not defined"
   when: item not in vars
   loop:
@@ -11,7 +12,7 @@
   ansible.builtin.command:
     cmd: "{{ k3s_bin_path }} --version"
   register: k3s_current_version
-  check_mode: no
+  check_mode: false
   changed_when: false
 
 - name: Show current k3s version
