@@ -33,3 +33,33 @@ ansible-playbook playbooks/setup-k3s.yml -i inventory --diff           # setup k
 ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff  # setup ACME certificate resolver
 ansible-playbook playbooks/update-k3s.yml -i inventory --diff          # update k3s version
 ```
+
+### Using ACME in k8s manifests
+
+Here's an example of how to use the created certificate resolver.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: your-service
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: your-domain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: your-service
+                port:
+                  number: 3000
+  tls:
+    - hosts:
+        - your-domain.com
+```
