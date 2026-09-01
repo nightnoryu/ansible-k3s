@@ -1,6 +1,6 @@
 ---
 - name: Checking if required variables are defined
-  fail:
+  ansible.builtin.fail:
     msg: "{{ item }} is not defined"
   when: item not in vars
   loop:
