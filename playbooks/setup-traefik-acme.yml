@@ -1,5 +1,6 @@
 ---
-- hosts: control-plane
+- name: Setup traefik acme
+  hosts: control-plane
   gather_facts: true
   roles:
     - configure-traefik-acme

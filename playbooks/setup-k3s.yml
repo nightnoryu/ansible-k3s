@@ -1,5 +1,6 @@
 ---
-- hosts: control-plane
+- name: Setup k3s
+  hosts: control-plane
   gather_facts: true
   roles:
     - update-apt-packages
