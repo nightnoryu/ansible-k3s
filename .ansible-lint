@@ -1,4 +1,5 @@
 ---
-var_naming_pattern: '^[a-z0-9_-]+$'
+role-name:
+  pattern: '^[a-z][a-z0-9_-]+$'
 exclude_paths:
   - .github/
