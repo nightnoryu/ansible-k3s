@@ -1,8 +1,8 @@
 # Ansible k3s
 
-Ansible playbooks for provisioning a K3s cluster with Traefik.
+Ansible automation for provisioning lightweight K3s clusters for self-hosted infrastructure.
 
-## How to use
+## 🔧 How to use
 
 ### Prerequisites
 
