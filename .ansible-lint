@@ -1,3 +1,9 @@
 ---
 exclude_paths:
   - .github/
+
+skip_list:
+  - role-name
+
+mock_modules:
+  - community.general.ufw

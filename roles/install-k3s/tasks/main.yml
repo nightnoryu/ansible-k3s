@@ -38,7 +38,10 @@
 
 - name: Download kubeconfig to local machine
   ansible.builtin.copy:
-    content: "{{ k3s_kubeconfig_content.content | b64decode | regex_replace('https://127.0.0.1:6443', 'https://' + ansible_ssh_host + ':6443') }}"
+    content: >-
+      {{ k3s_kubeconfig_content.content | b64decode
+         | regex_replace('https://127.0.0.1:6443',
+                         'https://' + ansible_ssh_host + ':6443') }}
     dest: "{{ k3s_kubeconfig_local_path }}"
     mode: "0600"
   delegate_to: localhost
