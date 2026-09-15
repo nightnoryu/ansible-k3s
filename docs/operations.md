@@ -52,3 +52,19 @@ sudo k3s kubectl -n kube-system logs deployment/traefik
 Traefik access logs are JSON records. `externalTrafficPolicy: Local` preserves
 the source address presented to Traefik instead of replacing it with a node
 address.
+
+## Applying one configuration area
+
+Roles use declarative package, template, firewall, and service modules, so they
+can be run repeatedly. To add or reconcile fail2ban on a host where K3s is
+already installed, use the fail2ban tag:
+
+```shell
+ansible-playbook playbooks/setup-k3s.yml -i inventory --tags fail2ban --diff
+```
+
+This does not invoke the K3s, Traefik, system-upgrade, or UFW roles. It expects
+UFW to have already been installed because the fail2ban jail uses UFW as its ban
+action.
+
+Available tags are `system`, `firewall`, `fail2ban`, `k3s`, and `traefik`.

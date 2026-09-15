@@ -3,8 +3,13 @@
   hosts: control-plane
   gather_facts: true
   roles:
-    - update-apt-packages
-    - configure-ufw
-    - configure-fail2ban
-    - install-k3s
-    - configure-traefik-acme
+    - role: update-apt-packages
+      tags: [system]
+    - role: configure-ufw
+      tags: [firewall]
+    - role: configure-fail2ban
+      tags: [fail2ban]
+    - role: install-k3s
+      tags: [k3s]
+    - role: configure-traefik-acme
+      tags: [traefik]
