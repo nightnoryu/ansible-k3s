@@ -16,6 +16,13 @@ spec:
       - "--certificatesresolvers.letsencrypt.acme.email={{ traefik_acme_email }}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    logs:
+      access:
+        enabled: true
+        format: json
+    service:
+      spec:
+        externalTrafficPolicy: Local
     ports:
       web:
         exposedPort: 80

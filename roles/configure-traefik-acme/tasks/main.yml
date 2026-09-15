@@ -1,4 +1,11 @@
----
+- name: Validate Traefik configuration
+  ansible.builtin.assert:
+    that:
+      - traefik_acme_email is defined
+      - traefik_acme_email | length > 0
+      - k3s_bin_path is defined
+    fail_msg: Define traefik_acme_email and k3s_bin_path before configuring Traefik.
+
 - name: Create HelmChartConfig
   ansible.builtin.template:
     src: traefik-config.yml
@@ -7,7 +14,10 @@
 
 - name: Wait for traefik rollout
   ansible.builtin.command:
-    cmd: 'kubectl -n kube-system rollout status deployment/traefik --timeout=5m'
+    cmd: >-
+      {{ k3s_bin_path }} kubectl -n kube-system rollout status
+      deployment/traefik --timeout=5m
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   changed_when: false
+  when: not ansible_check_mode
