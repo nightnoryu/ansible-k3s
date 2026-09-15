@@ -4,6 +4,3 @@ exclude_paths:
 
 skip_list:
   - role-name
-
-mock_modules:
-  - community.general.ufw
