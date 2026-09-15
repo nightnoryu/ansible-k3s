@@ -1,42 +1,68 @@
-# Ansible k3s
+# Ansible K3s
 
-Ansible automation for provisioning lightweight K3s clusters for self-hosted infrastructure.
+Ansible automation for provisioning and maintaining a secure, single-server K3s
+control plane for self-hosted workloads.
 
-## 🔧 How to use
+The initial setup installs operating-system updates, UFW, fail2ban, K3s, and a
+Traefik ACME configuration. It also downloads a ready-to-use kubeconfig to the
+Ansible controller.
 
-### Prerequisites
+## ✨ Features
 
-1. Debian-based VM with `python3` installed
-2. SSH access with either root or sudo and NOPASSWD
-3. Ansible
+- Pinned K3s installation and idempotent upgrades
+- Persistent, inventory-defined Kubernetes node names
+- Kubelet unsafe sysctls required by networking workloads such as WARP
+- UFW firewall rules and fail2ban protection for SSH
+- Traefik Let's Encrypt HTTP challenge support
+- JSON access logs with requester IP preservation
+- Automatic host reboots when package upgrades require one
 
-### Running playbooks
+## 🛠️ Quick start
+
+Requirements: a Debian-based server with Python 3, SSH access through root or a
+passwordless sudo user, and Ansible on the controller.
 
 ```shell
 git clone https://github.com/nightnoryu/ansible-k3s
 cd ansible-k3s
 
-# Set your VM IPs
+ansible-galaxy collection install -r requirements.yml
+
 cp inventory/hosts.example.yml inventory/hosts.yml
-$EDITOR inventory/hosts.yml
-
-# Set k3s version and email for traefik ACME
 cp inventory/group_vars/all.example.yml inventory/group_vars/all.yml
-$EDITOR inventory/group_vars/all.yml
+$EDITOR inventory/hosts.yml inventory/group_vars/all.yml
 
-# Check connectivity
 ansible all -m ping -i inventory
-
-# Use ansible for operations
-ansible-playbook playbooks/update-system.yml -i inventory --diff       # update system packages
-ansible-playbook playbooks/setup-k3s.yml -i inventory --diff           # setup k3s node
-ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff  # setup ACME certificate resolver
-ansible-playbook playbooks/update-k3s.yml -i inventory --diff          # update k3s version
+ansible-playbook playbooks/setup-k3s.yml -i inventory --diff
 ```
 
-### Using ACME in k8s manifests
+Every host must have a stable, unique `k3s_node_name`. Review the firewall ports
+and set `traefik_acme_email` before the first run. Generated inventory files are
+ignored by Git so local addresses and account details are not committed.
 
-Here's an example of how to use the created certificate resolver.
+## 🔄 Operations
+
+```shell
+# Upgrade system packages and reboot only when required
+ansible-playbook playbooks/update-system.yml -i inventory --diff
+
+# Reconcile the full initial configuration
+ansible-playbook playbooks/setup-k3s.yml -i inventory --diff
+
+# Reconcile only Traefik and ACME settings
+ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff
+
+# Upgrade K3s to k3s_version from group_vars
+ansible-playbook playbooks/update-k3s.yml -i inventory --diff
+```
+
+Detailed documentation:
+
+- [Configuration](docs/configuration.md)
+- [Operations and upgrades](docs/operations.md)
+- [Security and networking](docs/security.md)
+
+## 🔐 ACME-enabled Ingress example
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -49,7 +75,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: your-domain.com
+    - host: your-domain.example
       http:
         paths:
           - path: /
@@ -61,5 +87,11 @@ spec:
                   number: 3000
   tls:
     - hosts:
-        - your-domain.com
+        - your-domain.example
 ```
+
+## 🎯 Scope
+
+The supplied inventory and playbooks target a single K3s server. They are not a
+multi-server/agent bootstrap solution; adding HA requires server tokens,
+cluster-init/join settings, and tighter node-to-node firewall rules.
