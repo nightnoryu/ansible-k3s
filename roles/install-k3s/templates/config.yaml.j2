@@ -1,0 +1,4 @@
+---
+node-name: "{{ k3s_node_name }}"
+kubelet-arg:
+  - "allowed-unsafe-sysctls={{ k3s_allowed_unsafe_sysctls | join(',') }}"

@@ -1,20 +1,42 @@
 ---
-- name: Checking if required variables are defined
-  ansible.builtin.fail:
-    msg: "{{ item }} is not defined"
-  when: item not in vars
-  loop:
-    - k3s_install_script_url
-    - k3s_bin_path
-    - k3s_version
-    - k3s_kubeconfig_remote_path
-    - k3s_kubeconfig_local_path
+- name: Validate K3s configuration
+  ansible.builtin.assert:
+    that:
+      - k3s_install_script_url is defined
+      - k3s_bin_path is defined
+      - k3s_version is defined
+      - k3s_kubeconfig_remote_path is defined
+      - k3s_kubeconfig_local_path is defined
+      - k3s_node_name is defined
+      - k3s_node_name | length > 0
+      - k3s_allowed_unsafe_sysctls is defined
+      - k3s_allowed_unsafe_sysctls | length > 0
+    fail_msg: >-
+      Define the K3s group variables and a unique k3s_node_name for every host.
+
+- name: Create K3s configuration directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Configure persistent K3s node settings
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart k3s
 
 - name: Download k3s install script
   ansible.builtin.get_url:
     url: "{{ k3s_install_script_url }}"
     dest: /tmp/k3s-install.sh
     mode: "0755"
+    checksum: "{{ k3s_install_script_checksum | default(omit) }}"
 
 - name: Run k3s install script
   ansible.builtin.command: /tmp/k3s-install.sh
@@ -22,6 +44,9 @@
     creates: "{{ k3s_bin_path }}"
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: >-
+      server --kubelet-arg=allowed-unsafe-sysctls={{
+      k3s_allowed_unsafe_sysctls | join(',') }}
   when: not ansible_check_mode
 
 - name: Ensure k3s service is running
@@ -30,18 +55,31 @@
     enabled: true
     state: started
 
+- name: Apply pending K3s configuration changes
+  ansible.builtin.meta: flush_handlers
+
 - name: Read kubeconfig from control plane
   ansible.builtin.slurp:
     src: "{{ k3s_kubeconfig_remote_path }}"
   register: k3s_kubeconfig_content
   when: not ansible_check_mode
 
+- name: Create local kubeconfig directory
+  ansible.builtin.file:
+    path: "{{ k3s_kubeconfig_local_path | dirname }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+
 - name: Download kubeconfig to local machine
   ansible.builtin.copy:
     content: >-
       {{ k3s_kubeconfig_content.content | b64decode
          | regex_replace('https://127.0.0.1:6443',
-                         'https://' + ansible_ssh_host + ':6443') }}
+                         'https://' + (k3s_api_endpoint
+                           | default(ansible_host
+                           | default(inventory_hostname))) + ':6443') }}
     dest: "{{ k3s_kubeconfig_local_path }}"
     mode: "0600"
   delegate_to: localhost

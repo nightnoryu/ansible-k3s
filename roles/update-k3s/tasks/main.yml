@@ -1,12 +1,13 @@
 ---
-- name: Checking if required variables are defined
-  ansible.builtin.fail:
-    msg: "{{ item }} is not defined"
-  when: item not in vars
-  loop:
-    - k3s_install_script_url
-    - k3s_bin_path
-    - k3s_version
+- name: Validate K3s update configuration
+  ansible.builtin.assert:
+    that:
+      - k3s_install_script_url is defined
+      - k3s_bin_path is defined
+      - k3s_version is defined
+      - k3s_allowed_unsafe_sysctls is defined
+      - k3s_allowed_unsafe_sysctls | length > 0
+    fail_msg: Define all required K3s variables before updating.
 
 - name: Check current k3s version
   ansible.builtin.command:
@@ -24,14 +25,20 @@
     url: "{{ k3s_install_script_url }}"
     dest: /tmp/k3s-install.sh
     mode: "0755"
+    checksum: "{{ k3s_install_script_checksum | default(omit) }}"
+  when: k3s_version not in k3s_current_version.stdout
 
 - name: Run k3s install script
   ansible.builtin.command: /tmp/k3s-install.sh
-  args:
-    creates: "{{ k3s_bin_path }}"
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
-  when: not ansible_check_mode
+    INSTALL_K3S_EXEC: >-
+      server --kubelet-arg=allowed-unsafe-sysctls={{
+      k3s_allowed_unsafe_sysctls | join(',') }}
+  when:
+    - not ansible_check_mode
+    - k3s_version not in k3s_current_version.stdout
+  changed_when: true
 
 - name: Ensure k3s service is running
   ansible.builtin.systemd:

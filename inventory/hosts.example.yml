@@ -2,4 +2,6 @@
 all:
   hosts:
     control-plane:
-      ansible_ssh_host: 192.168.42.1
+      ansible_host: 192.168.42.1
+      # Must be unique and remain stable for the lifetime of this K3s node.
+      k3s_node_name: control-plane
