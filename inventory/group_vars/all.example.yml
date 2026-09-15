@@ -11,3 +11,8 @@ k3s_allowed_unsafe_sysctls:
   - net.ipv4.conf.all.src_valid_mark
 
 traefik_acme_email: 'username@example.com'
+
+# fail2ban SSH jail settings.
+fail2ban_sshd_bantime: 1h
+fail2ban_sshd_findtime: 10m
+fail2ban_sshd_maxretry: 3

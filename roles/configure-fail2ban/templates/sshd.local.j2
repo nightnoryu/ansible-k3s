@@ -1,0 +1,8 @@
+[sshd]
+enabled = true
+port = {{ ansible_port | default(22) }}
+backend = systemd
+banaction = ufw
+bantime = {{ fail2ban_sshd_bantime }}
+findtime = {{ fail2ban_sshd_findtime }}
+maxretry = {{ fail2ban_sshd_maxretry }}
