@@ -17,30 +17,35 @@
     rule: allow
     port: "80"
     proto: tcp
+    comment: "HTTP"
 
 - name: Allow HTTPS
   community.general.ufw:
     rule: allow
     port: "443"
     proto: tcp
+    comment: "HTTPS"
 
 - name: Allow k3s API
   community.general.ufw:
     rule: allow
     port: "6443"
     proto: tcp
+    comment: "K3s API Server"
 
 - name: Allow kubelet
   community.general.ufw:
     rule: allow
     port: "10250"
     proto: tcp
+    comment: "K3s Kubelet"
 
 - name: Allow Flannel VXLAN
   community.general.ufw:
     rule: allow
     port: "8472"
     proto: udp
+    comment: "K3s Flannel VXLAN"
 
 - name: Set ufw default policies
   community.general.ufw:
