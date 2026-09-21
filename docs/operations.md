@@ -17,7 +17,6 @@ The setup order is deliberate:
 2. Open required firewall ports before enabling UFW.
 3. Install fail2ban and connect its SSH jail to UFW.
 4. Write persistent K3s configuration and install K3s.
-5. Configure bundled Traefik and wait for its rollout.
 
 An initial check-mode run cannot validate resources that do not exist yet, but
 it is still useful for inventory and variable validation.
