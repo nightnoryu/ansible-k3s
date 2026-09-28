@@ -20,20 +20,23 @@ Ansible controller.
 ## 🛠️ Quick start
 
 Requirements: a Debian-based server with Python 3, SSH access through root or a
-passwordless sudo user, and Ansible on the controller.
+passwordless sudo user, and [mise](https://mise.jdx.dev/) on the controller.
+The project pins uv and ansible-core in `mise.toml`; mise uses uv to install
+ansible-core.
 
 ```shell
 git clone https://github.com/nightnoryu/ansible-k3s
 cd ansible-k3s
 
-ansible-galaxy collection install -r requirements.yml
+mise install
+mise run collections
 
 cp inventory/hosts.example.yml inventory/hosts.yml
 cp inventory/group_vars/all.example.yml inventory/group_vars/all.yml
 $EDITOR inventory/hosts.yml inventory/group_vars/all.yml
 
-ansible all -m ping -i inventory
-ansible-playbook playbooks/setup-k3s.yml -i inventory --diff
+mise run ping
+mise run setup
 ```
 
 Every host must have a stable, unique `k3s_node_name`. Review the firewall ports
@@ -44,17 +47,21 @@ ignored by Git so local addresses and account details are not committed.
 
 ```shell
 # Upgrade system packages and reboot only when required
-ansible-playbook playbooks/update-system.yml -i inventory --diff
+mise run update-system
 
 # Reconcile the full initial configuration
-ansible-playbook playbooks/setup-k3s.yml -i inventory --diff
+mise run setup
 
 # Reconcile only Traefik and ACME settings
-ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff
+mise run setup-traefik-acme
 
 # Upgrade K3s to k3s_version from group_vars
-ansible-playbook playbooks/update-k3s.yml -i inventory --diff
+mise run update-k3s
 ```
+
+Playbook tasks use `inventory` and `--diff` by default. Pass additional Ansible
+options after the task name, for example `mise run setup --check` or
+`mise run setup --tags fail2ban`.
 
 Detailed documentation:
 

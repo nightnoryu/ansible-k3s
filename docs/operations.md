@@ -2,13 +2,15 @@
 
 ## Initial provisioning
 
-Install the required collection and validate connectivity first:
+Install the pinned controller tools and required collection, then validate
+connectivity:
 
 ```shell
-ansible-galaxy collection install -r requirements.yml
-ansible all -m ping -i inventory
-ansible-playbook playbooks/setup-k3s.yml -i inventory --check --diff
-ansible-playbook playbooks/setup-k3s.yml -i inventory --diff
+mise install
+mise run collections
+mise run ping
+mise run setup --check
+mise run setup
 ```
 
 The setup order is deliberate:
@@ -26,8 +28,8 @@ it is still useful for inventory and variable validation.
 Set a tested `k3s_version` in `inventory/group_vars/all.yml`, then run:
 
 ```shell
-ansible-playbook playbooks/update-k3s.yml -i inventory --check --diff
-ansible-playbook playbooks/update-k3s.yml -i inventory --diff
+mise run update-k3s --check
+mise run update-k3s
 ```
 
 The update role compares the requested version with `k3s --version` and invokes
@@ -59,7 +61,7 @@ can be run repeatedly. To add or reconcile fail2ban on a host where K3s is
 already installed, use the fail2ban tag:
 
 ```shell
-ansible-playbook playbooks/setup-k3s.yml -i inventory --tags fail2ban --diff
+mise run setup --tags fail2ban
 ```
 
 This does not invoke the K3s, Traefik, system-upgrade, or UFW roles. It expects

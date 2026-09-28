@@ -1,0 +1,27 @@
+[tools]
+uv = "0.12.19"
+"pypi:ansible-core" = { version = "2.21.4", depends = ["uv"] }
+
+[tasks.collections]
+description = "Install required Ansible collections"
+run = "ansible-galaxy collection install -r requirements.yml"
+
+[tasks.ping]
+description = "Check inventory host connectivity"
+run = "ansible all -m ping -i inventory"
+
+[tasks.setup]
+description = "Provision and reconcile K3s"
+run = "ansible-playbook playbooks/setup-k3s.yml -i inventory --diff"
+
+[tasks.update-system]
+description = "Upgrade system packages"
+run = "ansible-playbook playbooks/update-system.yml -i inventory --diff"
+
+[tasks.update-k3s]
+description = "Upgrade K3s to the configured version"
+run = "ansible-playbook playbooks/update-k3s.yml -i inventory --diff"
+
+[tasks.setup-traefik-acme]
+description = "Reconcile Traefik and ACME settings"
+run = "ansible-playbook playbooks/setup-traefik-acme.yml -i inventory --diff"
