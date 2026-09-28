@@ -21,8 +21,8 @@ Ansible controller.
 
 Requirements: a Debian-based server with Python 3, SSH access through root or a
 passwordless sudo user, and [mise](https://mise.jdx.dev/) on the controller.
-The project pins uv and ansible-core in `mise.toml`; mise uses uv to install
-ansible-core.
+The project pins uv, ansible-core, yamllint, and ansible-lint in `mise.toml`;
+mise uses uv to install the Python tools.
 
 ```shell
 git clone https://github.com/nightnoryu/ansible-k3s
@@ -58,6 +58,8 @@ mise run setup-traefik-acme
 # Upgrade K3s to k3s_version from group_vars
 mise run update-k3s
 ```
+
+Run the same YAML and Ansible checks as CI with `mise check`.
 
 Playbook tasks use `inventory` and `--diff` by default. Pass additional Ansible
 options after the task name, for example `mise run setup --check` or

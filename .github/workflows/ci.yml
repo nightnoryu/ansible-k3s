@@ -16,16 +16,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Setup Python
-        uses: actions/setup-python@v7
+      - name: Setup mise
+        uses: jdx/mise-action@v4
         with:
-          python-version: '3.x'
+          install: true
+          cache: true
 
-      - name: Install linters
-        run: pip install yamllint ansible-lint
+      - name: Install Ansible collections
+        run: mise run collections
 
-      - name: Run yamllint
-        run: yamllint .
-
-      - name: Run ansible-lint
-        run: ansible-lint
+      - name: Run checks
+        run: mise check
