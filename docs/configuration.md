@@ -57,3 +57,35 @@ apply it automatically; a workload must still request it in its pod security
 context.
 
 The local kubeconfig is mode `0600`. Treat it as an administrative credential.
+
+## Wildcard HTTPS
+
+Select `traefik_acme_challenge: dns` and set `traefik_acme_dns_provider` to the
+Traefik/lego provider for the authoritative DNS zone. `traefik_acme_dns_secret`
+(default `traefik-dns`) names an existing Secret in `kube-system`; its keys are
+that provider's environment variables. Keep credentials outside Git. For
+Cloudflare, use `CF_DNS_API_TOKEN` with Zone DNS Edit and Zone Read restricted
+to the relevant zone. Other providers require different keys; see
+[Traefik DNS-01 providers](https://doc.traefik.io/traefik/reference/install-configuration/tls/certificate-resolvers/acme/).
+The role references the Secret and does not create or log its contents.
+
+Start with the example staging CA and `acme-staging.json`. After verifying
+issuance, set `traefik_acme_ca_server` to
+`https://acme-v02.api.letsencrypt.org/directory` and
+`traefik_acme_storage_file: acme.json`. These separate files avoid reusing an
+untrusted staging certificate. Existing installations retain HTTP-01 and their
+production ACME file unless explicitly configured otherwise.
+
+The HelmChartConfig pins one Deployment replica, disables autoscaling, uses
+Recreate updates and a persistent `/data` volume. An init container sets the
+selected ACME file to owner 65532 and mode 0600. Keep this PVC on upgrades and
+back it up manually as a private key. Do not run multiple replicas sharing it.
+HTTP redirects to HTTPS; HTTPS request reads allow five minutes for direct photo
+uploads. Access logs omit paths, queries and headers to avoid logging signatures.
+
+When deployment is authorized, create the DNS credential Secret before running
+`playbooks/setup-traefik-acme.yml`. Confirm the installed k3s Traefik chart accepts
+the values, check issuance using staging, then switch CA/storage and verify
+trusted HTTPS for the apex, dashboard and two arbitrary subdomains. Restart
+Traefik and verify the certificate remains unchanged. Writing these files does
+not perform any of those live checks.

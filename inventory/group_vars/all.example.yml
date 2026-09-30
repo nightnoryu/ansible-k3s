@@ -12,6 +12,16 @@ k3s_allowed_unsafe_sysctls:
 
 traefik_acme_email: 'username@example.com'
 
+# Leave the following settings empty to use http challenge for ACME
+
+# Wildcard HTTPS: create the provider credential Secret in kube-system first.
+# traefik_acme_challenge: dns
+# traefik_acme_dns_provider: cloudflare
+# traefik_acme_dns_secret: traefik-dns
+# Verify staging issuance before selecting production with a separate acme.json.
+# traefik_acme_ca_server: https://acme-staging-v02.api.letsencrypt.org/directory
+# traefik_acme_storage_file: acme-staging.json
+
 # fail2ban SSH jail settings.
 fail2ban_sshd_bantime: 1h
 fail2ban_sshd_findtime: 10m
