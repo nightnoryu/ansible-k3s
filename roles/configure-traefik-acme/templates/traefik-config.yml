@@ -14,8 +14,21 @@ spec:
       path: /data
     additionalArguments:
       - "--certificatesresolvers.letsencrypt.acme.email={{ traefik_acme_email }}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/data/{{ traefik_acme_storage_file }}"
+      - "--certificatesresolvers.letsencrypt.acme.caserver={{ traefik_acme_ca_server }}"
+{% if traefik_acme_challenge == 'dns' %}
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider={{ traefik_acme_dns_provider }}"
+{% else %}
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+{% endif %}
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.transport.respondingtimeouts.readtimeout=300s"
+{% if traefik_acme_challenge == 'dns' %}
+    envFrom:
+      - secretRef:
+          name: {{ traefik_acme_dns_secret }}
+{% endif %}
     logs:
       access:
         enabled: true
