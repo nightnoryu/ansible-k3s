@@ -5,6 +5,9 @@
       - traefik_acme_email is defined
       - traefik_acme_email | length > 0
       - k3s_bin_path is defined
+      - traefik_acme_challenge in ['http', 'dns']
+      - traefik_acme_challenge != 'dns' or traefik_acme_dns_provider | length > 0
+      - traefik_acme_storage_file is match('^[a-zA-Z0-9_-]+[.]json$')
     fail_msg: Define traefik_acme_email and k3s_bin_path before configuring Traefik.
 
 - name: Create HelmChartConfig
