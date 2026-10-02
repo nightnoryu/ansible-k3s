@@ -104,3 +104,7 @@ spec:
 The supplied inventory and playbooks target a single K3s server. They are not a
 multi-server/agent bootstrap solution; adding HA requires server tokens,
 cluster-init/join settings, and tighter node-to-node firewall rules.
+
+## 📜 License
+
+Distributed under the MIT License. See [License](/LICENSE) for more information.
