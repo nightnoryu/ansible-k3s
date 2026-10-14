@@ -12,13 +12,14 @@ k3s_allowed_unsafe_sysctls:
 
 traefik_acme_email: 'username@example.com'
 
-# Leave the following settings empty to use http challenge for ACME
-
-# Wildcard HTTPS: create the provider credential Secret in kube-system first.
+# For wildcard HTTPS, select DNS-01 and set the domain/provider values.
+# DNS-01 requires provider credentials in a kube-system Secret before deployment.
+# For Beget DNS, use BEGET_USERNAME and BEGET_PASSWORD as Secret keys.
 # traefik_acme_challenge: dns
-# traefik_acme_dns_provider: cloudflare
+# traefik_acme_dns_provider: beget
+# traefik_acme_wildcard_domain: example.com
 # traefik_acme_dns_secret: traefik-dns
-# Verify staging issuance before selecting production with a separate acme.json.
+# Verify staging issuance before selecting production with a separate ACME file.
 # traefik_acme_ca_server: https://acme-staging-v02.api.letsencrypt.org/directory
 # traefik_acme_storage_file: acme-staging.json
 

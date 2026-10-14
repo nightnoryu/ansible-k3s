@@ -3,9 +3,8 @@
 Ansible automation for provisioning and maintaining a secure, single-server K3s
 control plane for self-hosted workloads.
 
-The initial setup installs operating-system updates, UFW, fail2ban, K3s, and a
-Traefik ACME configuration. It also downloads a ready-to-use kubeconfig to the
-Ansible controller.
+The initial setup installs operating-system updates, UFW, fail2ban, and K3s.
+The separate Traefik playbook configures ACME after DNS credentials are ready.
 
 ## ✨ Features
 
@@ -13,7 +12,7 @@ Ansible controller.
 - Persistent, inventory-defined Kubernetes node names
 - Kubelet unsafe sysctls required by networking workloads such as WARP
 - UFW firewall rules and fail2ban protection for SSH
-- Traefik Let's Encrypt HTTP challenge support
+- Traefik Let's Encrypt DNS challenge and wildcard certificate support
 - JSON access logs with requester IP preservation
 - Automatic host reboots when package upgrades require one
 
@@ -37,11 +36,15 @@ $EDITOR inventory/hosts.yml inventory/group_vars/all.yml
 
 mise run ping
 mise run setup
+# Reconcile Traefik ACME settings after setting its variables.
+mise run setup-traefik-acme
 ```
 
 Every host must have a stable, unique `k3s_node_name`. Review the firewall ports
-and set `traefik_acme_email` before the first run. Generated inventory files are
-ignored by Git so local addresses and account details are not committed.
+and set `traefik_acme_email`. For DNS-01, also set the DNS provider variables and
+create the provider Secret before running the Traefik playbook. Generated
+inventory files are ignored by Git so local addresses and account details are
+not committed.
 
 ## 🔄 Operations
 
@@ -80,11 +83,10 @@ metadata:
   name: your-service
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
   ingressClassName: traefik
   rules:
-    - host: your-domain.example
+    - host: your-service.example.com
       http:
         paths:
           - path: /
@@ -96,7 +98,7 @@ spec:
                   number: 3000
   tls:
     - hosts:
-        - your-domain.example
+        - your-service.example.com
 ```
 
 ## 🎯 Scope

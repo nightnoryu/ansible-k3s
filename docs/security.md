@@ -7,7 +7,7 @@ The UFW role permits:
 | Port               | Protocol | Use                             |
 |--------------------|----------|---------------------------------|
 | inventory SSH port | TCP      | Administration                  |
-| 80                 | TCP      | HTTP and ACME HTTP-01 challenge |
+| 80                 | TCP      | HTTP to HTTPS redirect          |
 | 443                | TCP      | HTTPS ingress                   |
 | 6443               | TCP      | Kubernetes API                  |
 | 10250              | TCP      | Kubelet API                     |

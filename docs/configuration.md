@@ -47,6 +47,8 @@ all:
 | `k3s_api_endpoint`            | Optional kubeconfig address; defaults to `ansible_host`   |
 | `k3s_allowed_unsafe_sysctls`  | Sysctls admitted by kubelet for requesting pods           |
 | `traefik_acme_email`          | Let's Encrypt account email                               |
+| `traefik_acme_dns_provider`   | Traefik/lego DNS provider code                             |
+| `traefik_acme_wildcard_domain` | Base domain covered by the wildcard certificate           |
 | `fail2ban_sshd_bantime`       | Duration of an SSH ban                                    |
 | `fail2ban_sshd_findtime`      | Time window in which SSH failures are counted             |
 | `fail2ban_sshd_maxretry`      | Failures allowed during the find-time window              |
@@ -60,32 +62,41 @@ The local kubeconfig is mode `0600`. Treat it as an administrative credential.
 
 ## Wildcard HTTPS
 
-Select `traefik_acme_challenge: dns` and set `traefik_acme_dns_provider` to the
-Traefik/lego provider for the authoritative DNS zone. `traefik_acme_dns_secret`
+HTTP-01 is the default. For wildcard HTTPS, set
+`traefik_acme_challenge: dns`, set `traefik_acme_dns_provider` to the
+Traefik/lego provider for the authoritative DNS zone, and set
+`traefik_acme_wildcard_domain` to the base domain, such as `nightnoryu.com`.
+`traefik_acme_dns_secret`
 (default `traefik-dns`) names an existing Secret in `kube-system`; its keys are
 that provider's environment variables. Keep credentials outside Git. For
-Cloudflare, use `CF_DNS_API_TOKEN` with Zone DNS Edit and Zone Read restricted
-to the relevant zone. Other providers require different keys; see
+Beget, use `BEGET_USERNAME` and `BEGET_PASSWORD`. Other providers require
+different keys; see
 [Traefik DNS-01 providers](https://doc.traefik.io/traefik/reference/install-configuration/tls/certificate-resolvers/acme/).
-The role references the Secret and does not create or log its contents.
+The role checks that the Secret exists, references it, and does not log its contents.
 
 Start with the example staging CA and `acme-staging.json`. After verifying
 issuance, set `traefik_acme_ca_server` to
 `https://acme-v02.api.letsencrypt.org/directory` and
 `traefik_acme_storage_file: acme.json`. These separate files avoid reusing an
-untrusted staging certificate. Existing installations retain HTTP-01 and their
-production ACME file unless explicitly configured otherwise.
+untrusted staging certificate. The chart creates the default TLS store with a
+certificate for the configured base domain's `*.` subdomains, which covers one
+level of subdomains. Set a wildcard DNS A/AAAA record to the ingress IP if new
+names should resolve without individual DNS changes. Each new service needs an
+Ingress with TLS enabled; omit the `router.tls.certresolver` annotation to use
+the shared wildcard certificate. The base domain itself is not covered.
 
-The HelmChartConfig pins one Deployment replica, disables autoscaling, uses
-Recreate updates and a persistent `/data` volume. An init container sets the
-selected ACME file to owner 65532 and mode 0600. Keep this PVC on upgrades and
-back it up manually as a private key. Do not run multiple replicas sharing it.
+With Beget, create the `_acme-challenge` subdomain in the Beget account before
+the first run. Beget's `getData` API fails for names absent from its subdomain
+list, so merely writing a TXT record to an absent name is insufficient. The
+subdomain must remain in the account for renewals.
+
+The HelmChartConfig pins one Deployment replica, uses Recreate updates and a
+persistent `/data` volume. Keep this PVC on upgrades and back it up manually as
+a private key. Do not run multiple replicas sharing it.
 HTTP redirects to HTTPS; HTTPS request reads allow five minutes for direct photo
 uploads. Access logs omit paths, queries and headers to avoid logging signatures.
 
-When deployment is authorized, create the DNS credential Secret before running
-`playbooks/setup-traefik-acme.yml`. Confirm the installed k3s Traefik chart accepts
-the values, check issuance using staging, then switch CA/storage and verify
-trusted HTTPS for the apex, dashboard and two arbitrary subdomains. Restart
-Traefik and verify the certificate remains unchanged. Writing these files does
-not perform any of those live checks.
+Create the DNS credential Secret before running `playbooks/setup-traefik-acme.yml`.
+Check issuance with staging, then switch to production and verify the wildcard
+certificate and an existing service. Keep the production ACME file on the PVC
+so Traefik can renew the certificate after restarts.
