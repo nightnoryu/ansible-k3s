@@ -18,7 +18,20 @@ traefik_acme_email: 'username@example.com'
 # in ignored inventory or Ansible Vault, never in this tracked example.
 # traefik_acme_challenge: dns
 # traefik_acme_dns_provider: beget
+# Use authoritative DNS resolvers if cluster DNS caches stale ACME TXT answers.
+# traefik_acme_dns_resolvers:
+#   - ns1.beget.com:53
+#   - ns2.beget.com:53
 # traefik_acme_wildcard_domain: example.com
+# For nested wildcards (for example *.app.example.com), Beget needs the
+# corresponding _acme-challenge.app subdomain registered in its account.
+# traefik_acme_beget_challenge_subdomains:
+#   - _acme-challenge.app
+# Register A records for nested domains because adding a Beget subdomain can
+# stop the parent wildcard from providing DNS answers below that name.
+# traefik_acme_beget_a_records:
+#   app: 203.0.113.10
+#   '*.app': 203.0.113.10
 # traefik_acme_dns_secret: traefik-dns
 # traefik_acme_dns_credentials:
 #   BEGET_USERNAME: your-api-username

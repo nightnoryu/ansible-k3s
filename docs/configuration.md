@@ -48,6 +48,7 @@ all:
 | `k3s_allowed_unsafe_sysctls`  | Sysctls admitted by kubelet for requesting pods           |
 | `traefik_acme_email`          | Let's Encrypt account email                               |
 | `traefik_acme_dns_provider`   | Traefik/lego DNS provider code                             |
+| `traefik_acme_dns_resolvers`  | Optional DNS servers for ACME propagation checks           |
 | `traefik_acme_dns_credentials` | Provider environment variables stored in a Kubernetes Secret |
 | `traefik_acme_wildcard_domain` | Base domain covered by the wildcard certificate           |
 | `fail2ban_sshd_bantime`       | Duration of an SSH ban                                    |
@@ -93,6 +94,20 @@ With Beget, create the `_acme-challenge` subdomain in the Beget account before
 the first run. Beget's `getData` API fails for names absent from its subdomain
 list, so merely writing a TXT record to an absent name is insufficient. The
 subdomain must remain in the account for renewals.
+For a nested wildcard such as `*.lumio.nightnoryu.com`, set
+`traefik_acme_beget_challenge_subdomains: ['_acme-challenge.lumio']`. The role
+registers each missing subdomain through Beget's API before Traefik requests
+the certificate. Keep the entry configured so later playbook runs preserve the
+renewal prerequisite.
+Beget's new nested subdomain can prevent the parent wildcard DNS record from
+answering for the service. Set `traefik_acme_beget_a_records` for the service
+name and its nested wildcard, for example `lumio: 159.194.227.174` and
+`'*.lumio': 159.194.227.174`. The role registers those subdomains and maintains
+their A records.
+If Kubernetes DNS caches an earlier TXT answer, set
+`traefik_acme_dns_resolvers: ['ns1.beget.com:53', 'ns2.beget.com:53']` so
+Traefik checks the published challenge against Beget's authoritative servers.
+This affects ACME checks only.
 
 The HelmChartConfig pins one Deployment replica, uses Recreate updates and a
 persistent `/data` volume. Keep this PVC on upgrades and back it up manually as
