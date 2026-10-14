@@ -40,7 +40,13 @@ spec:
         defaultGeneratedCert:
           resolver: letsencrypt
           domain:
-            main: "*.{{ traefik_acme_wildcard_domain }}"
+            main: "*.{{ traefik_acme_wildcard_domains[0] }}"
+{% if traefik_acme_wildcard_domains | length > 1 %}
+            sans:
+{% for domain in traefik_acme_wildcard_domains[1:] %}
+              - "*.{{ domain }}"
+{% endfor %}
+{% endif %}
 {% endif %}
     logs:
       access:

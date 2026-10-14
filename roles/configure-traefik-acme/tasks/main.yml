@@ -16,184 +16,21 @@
         traefik_acme_challenge != 'dns' or traefik_acme_dns_provider != 'beget' or
         (traefik_acme_dns_credentials.BEGET_USERNAME | default('') | length > 0 and
          traefik_acme_dns_credentials.BEGET_PASSWORD | default('') | length > 0)
-      - traefik_acme_challenge != 'dns' or traefik_acme_wildcard_domain is match('^[a-zA-Z0-9-]+([.][a-zA-Z0-9-]+)+$')
       - >-
-        traefik_acme_beget_challenge_subdomains is sequence and
-        traefik_acme_beget_challenge_subdomains is not string and
-        (traefik_acme_beget_challenge_subdomains |
-         reject('match', '^_acme-challenge([.][a-zA-Z0-9-]+)*$') | list | length) == 0
-      - traefik_acme_beget_a_records is mapping
+        traefik_acme_wildcard_domains is sequence and
+        traefik_acme_wildcard_domains is not string
+      - traefik_acme_challenge != 'dns' or traefik_acme_wildcard_domains | length > 0
       - >-
-        (traefik_acme_beget_a_records.keys() |
-         reject('match', '^([*]|[a-zA-Z0-9-]+)([.][a-zA-Z0-9-]+)*$') |
+        traefik_acme_challenge != 'dns' or
+        (traefik_acme_wildcard_domains |
+         reject('match', '^[a-zA-Z0-9-]+([.][a-zA-Z0-9-]+)+$') |
          list | length) == 0
       - >-
-        (traefik_acme_beget_a_records.values() |
-         reject('match', '^[0-9]{1,3}([.][0-9]{1,3}){3}$') |
-         list | length) == 0
+        traefik_acme_challenge != 'dns' or
+        traefik_acme_wildcard_domains | unique | list | length ==
+        traefik_acme_wildcard_domains | length
       - traefik_acme_storage_file is match('^[a-zA-Z0-9_-]+[.]json$')
-    fail_msg: Define the ACME email, K3s binary, DNS provider, credentials, and wildcard base domain.
-
-- name: Prepare Beget API authentication
-  ansible.builtin.set_fact:
-    traefik_acme_beget_query: >-
-      {{ 'login=' ~ (traefik_acme_dns_credentials.BEGET_USERNAME | urlencode) ~
-         '&passwd=' ~ (traefik_acme_dns_credentials.BEGET_PASSWORD | urlencode) ~
-         '&output_format=json' }}
-  no_log: true
-  when:
-    - traefik_acme_challenge == 'dns'
-    - traefik_acme_dns_provider == 'beget'
-    - >-
-      traefik_acme_beget_challenge_subdomains | length > 0 or
-      traefik_acme_beget_a_records | length > 0
-    - not ansible_check_mode
-
-- name: Read Beget domains for additional ACME challenges
-  ansible.builtin.uri:
-    url: "https://api.beget.com/api/domain/getList?{{ traefik_acme_beget_query }}"
-    return_content: true
-  register: traefik_acme_beget_domains
-  no_log: true
-  when:
-    - traefik_acme_beget_query is defined
-
-- name: Parse Beget domain response
-  ansible.builtin.set_fact:
-    traefik_acme_beget_domains_response: "{{ traefik_acme_beget_domains.content | from_json }}"
-  no_log: true
-  when: traefik_acme_beget_domains is not skipped
-
-- name: Check Beget parent domain
-  ansible.builtin.assert:
-    that:
-      - traefik_acme_beget_domains_response.status == 'success'
-      - traefik_acme_beget_domains_response.answer.status == 'success'
-      - >-
-        traefik_acme_beget_domains_response.answer.result |
-        selectattr('fqdn', 'equalto', traefik_acme_wildcard_domain) |
-        list | length == 1
-    fail_msg: The configured wildcard base domain must exist in the Beget account.
-  no_log: true
-  when: traefik_acme_beget_domains is not skipped
-
-- name: Select Beget parent domain
-  ansible.builtin.set_fact:
-    traefik_acme_beget_domain_id: >-
-      {{ traefik_acme_beget_domains_response.answer.result |
-         selectattr('fqdn', 'equalto', traefik_acme_wildcard_domain) |
-         map(attribute='id') | first }}
-  when: traefik_acme_beget_domains is not skipped
-
-- name: Read Beget subdomains for additional ACME challenges
-  ansible.builtin.uri:
-    url: "https://api.beget.com/api/domain/getSubdomainList?{{ traefik_acme_beget_query }}"
-    return_content: true
-  register: traefik_acme_beget_subdomains
-  no_log: true
-  when: traefik_acme_beget_domains is not skipped
-
-- name: Parse Beget subdomain response
-  ansible.builtin.set_fact:
-    traefik_acme_beget_subdomains_response: "{{ traefik_acme_beget_subdomains.content | from_json }}"
-  no_log: true
-  when: traefik_acme_beget_subdomains is not skipped
-
-- name: Check Beget subdomain response
-  ansible.builtin.assert:
-    that:
-      - traefik_acme_beget_subdomains_response.status == 'success'
-      - traefik_acme_beget_subdomains_response.answer.status == 'success'
-    fail_msg: Could not list the Beget subdomains required for ACME.
-  no_log: true
-  when: traefik_acme_beget_subdomains is not skipped
-
-- name: Create missing Beget DNS subdomains
-  ansible.builtin.uri:
-    url: >-
-      {{ 'https://api.beget.com/api/domain/addSubdomainVirtual?' ~
-         traefik_acme_beget_query ~ '&input_format=json&input_data=' ~
-         ({'subdomain': item, 'domain_id': traefik_acme_beget_domain_id} |
-          to_json | urlencode) }}
-    return_content: true
-  loop: >-
-    {{ (traefik_acme_beget_challenge_subdomains +
-        (traefik_acme_beget_a_records.keys() | list)) | unique }}
-  register: traefik_acme_beget_created_subdomains
-  changed_when: true
-  no_log: true
-  when:
-    - traefik_acme_beget_subdomains is not skipped
-    - item ~ '.' ~ traefik_acme_wildcard_domain not in
-      (traefik_acme_beget_subdomains_response.answer.result | map(attribute='fqdn') | list)
-
-- name: Check created Beget DNS subdomains
-  ansible.builtin.assert:
-    that:
-      - beget_result.status == 'success'
-      - beget_result.answer.status == 'success'
-    fail_msg: Beget could not create an ACME challenge subdomain.
-  loop: "{{ traefik_acme_beget_created_subdomains.results | default([]) }}"
-  vars:
-    beget_result: "{{ item.content | from_json }}"
-  no_log: true
-  when: item is not skipped
-
-- name: Read managed Beget A records
-  ansible.builtin.uri:
-    url: >-
-      {{ 'https://api.beget.com/api/dns/getData?' ~ traefik_acme_beget_query ~
-         '&input_format=json&input_data=' ~
-         ({'fqdn': item.key ~ '.' ~ traefik_acme_wildcard_domain} |
-          to_json | urlencode) }}
-    return_content: true
-  loop: "{{ traefik_acme_beget_a_records | dict2items }}"
-  register: traefik_acme_beget_a_record_data
-  no_log: true
-  when: traefik_acme_beget_query is defined
-
-- name: Check managed Beget A record responses
-  ansible.builtin.assert:
-    that:
-      - beget_result.status == 'success'
-      - beget_result.answer.status == 'success'
-    fail_msg: Could not read a managed Beget A record.
-  loop: "{{ traefik_acme_beget_a_record_data.results | default([]) }}"
-  vars:
-    beget_result: "{{ item.content | from_json }}"
-  no_log: true
-  when: item is not skipped
-
-- name: Update managed Beget A records
-  ansible.builtin.uri:
-    url: >-
-      {{ 'https://api.beget.com/api/dns/changeRecords?' ~ traefik_acme_beget_query ~
-         '&input_format=json&input_data=' ~
-         ({'fqdn': item.item.key ~ '.' ~ traefik_acme_wildcard_domain,
-           'records': {'A': [{'priority': 0, 'value': item.item.value}]}} |
-          to_json | urlencode) }}
-    return_content: true
-  loop: "{{ traefik_acme_beget_a_record_data.results | default([]) }}"
-  register: traefik_acme_beget_updated_a_records
-  changed_when: true
-  no_log: true
-  when:
-    - item is not skipped
-    - >-
-      ((item.content | from_json).answer.result.records.A | default([]) |
-       map(attribute='address') | list) != [item.item.value]
-
-- name: Check updated Beget A records
-  ansible.builtin.assert:
-    that:
-      - beget_result.status == 'success'
-      - beget_result.answer.status == 'success'
-    fail_msg: Beget could not update a managed A record.
-  loop: "{{ traefik_acme_beget_updated_a_records.results | default([]) }}"
-  vars:
-    beget_result: "{{ item.content | from_json }}"
-  no_log: true
-  when: item is not skipped
+    fail_msg: Define the ACME email, K3s binary, DNS provider, credentials, and wildcard base domains.
 
 - name: Encode DNS provider credentials for Kubernetes
   ansible.builtin.set_fact:
@@ -293,8 +130,7 @@
     - not ansible_check_mode
     - >-
       traefik_acme_dns_secret_created is changed or
-      traefik_acme_dns_secret_updated is changed or
-      traefik_acme_beget_created_subdomains is changed
+      traefik_acme_dns_secret_updated is changed
 
 - name: Wait for Traefik to load the requested ACME settings
   ansible.builtin.command:
@@ -345,16 +181,23 @@
       - tlsstore
       - default
       - -o
-      - 'jsonpath={.spec.defaultGeneratedCert.domain.main}'
+      - json
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
   register: traefik_tls_store
   until: >-
     traefik_tls_store.rc == 0 and
-    traefik_tls_store.stdout == '*.' ~ traefik_acme_wildcard_domain
+    traefik_tls_store_domain.get('main', '') ==
+    '*.' ~ traefik_acme_wildcard_domains[0] and
+    traefik_tls_store_domain.get('sans', []) ==
+    (traefik_acme_wildcard_domains[1:] | map('regex_replace', '^', '*.') | list)
   retries: 30
   delay: 5
   changed_when: false
+  vars:
+    traefik_tls_store_domain: >-
+      {{ (traefik_tls_store.stdout | default('{}', true) | from_json)
+         .get('spec', {}).get('defaultGeneratedCert', {}).get('domain', {}) }}
   when: traefik_acme_challenge == 'dns' and not ansible_check_mode
 
 - name: Wait for traefik rollout

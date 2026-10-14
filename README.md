@@ -13,7 +13,7 @@ DNS-01 is selected.
 - Persistent, inventory-defined Kubernetes node names
 - Kubelet unsafe sysctls required by networking workloads such as WARP
 - UFW firewall rules and fail2ban protection for SSH
-- Traefik Let's Encrypt DNS challenge and wildcard certificate support
+- Traefik Let's Encrypt DNS challenge with multiple wildcard domains
 - JSON access logs with requester IP preservation
 - Automatic host reboots when package upgrades require one
 

@@ -50,7 +50,7 @@ all:
 | `traefik_acme_dns_provider`   | Traefik/lego DNS provider code                             |
 | `traefik_acme_dns_resolvers`  | Optional DNS servers for ACME propagation checks           |
 | `traefik_acme_dns_credentials` | Provider environment variables stored in a Kubernetes Secret |
-| `traefik_acme_wildcard_domain` | Base domain covered by the wildcard certificate           |
+| `traefik_acme_wildcard_domains` | Base domains covered by the wildcard certificate          |
 | `fail2ban_sshd_bantime`       | Duration of an SSH ban                                    |
 | `fail2ban_sshd_findtime`      | Time window in which SSH failures are counted             |
 | `fail2ban_sshd_maxretry`      | Failures allowed during the find-time window              |
@@ -67,7 +67,8 @@ The local kubeconfig is mode `0600`. Treat it as an administrative credential.
 HTTP-01 is the default. For wildcard HTTPS, set
 `traefik_acme_challenge: dns`, set `traefik_acme_dns_provider` to the
 Traefik/lego provider for the authoritative DNS zone, and set
-`traefik_acme_wildcard_domain` to the base domain, such as `nightnoryu.com`.
+`traefik_acme_wildcard_domains` to a list of base domains, such as
+`['nightnoryu.com', 'lumiopho.com']`.
 `traefik_acme_dns_credentials` maps the provider's environment variable names
 to their values. The role creates or updates the `kube-system` Secret named by
 `traefik_acme_dns_secret` (default `traefik-dns`) before configuring Traefik.
@@ -84,26 +85,16 @@ issuance, set `traefik_acme_ca_server` to
 `https://acme-v02.api.letsencrypt.org/directory` and
 `traefik_acme_storage_file: acme.json`. These separate files avoid reusing an
 untrusted staging certificate. The chart creates the default TLS store with a
-certificate for the configured base domain's `*.` subdomains, which covers one
-level of subdomains. Set a wildcard DNS A/AAAA record to the ingress IP if new
-names should resolve without individual DNS changes. Each new service needs an
-Ingress with TLS enabled; omit the `router.tls.certresolver` annotation to use
-the shared wildcard certificate. The base domain itself is not covered.
+certificate with the first wildcard as its main name and the remaining
+wildcards as subject alternative names. Each wildcard covers one level of
+subdomains. Set wildcard DNS A/AAAA records for each base domain to the ingress
+IP if new names should resolve without individual DNS changes. Each new service
+needs an Ingress with TLS enabled. Omit the `router.tls.certresolver` annotation
+to use the shared wildcard certificate. The base domain itself is not covered.
 
-With Beget, create the `_acme-challenge` subdomain in the Beget account before
-the first run. Beget's `getData` API fails for names absent from its subdomain
-list, so merely writing a TXT record to an absent name is insufficient. The
-subdomain must remain in the account for renewals.
-For a nested wildcard such as `*.lumio.nightnoryu.com`, set
-`traefik_acme_beget_challenge_subdomains: ['_acme-challenge.lumio']`. The role
-registers each missing subdomain through Beget's API before Traefik requests
-the certificate. Keep the entry configured so later playbook runs preserve the
-renewal prerequisite.
-Beget's new nested subdomain can prevent the parent wildcard DNS record from
-answering for the service. Set `traefik_acme_beget_a_records` for the service
-name and its nested wildcard, for example `lumio: 159.194.227.174` and
-`'*.lumio': 159.194.227.174`. The role registers those subdomains and maintains
-their A records.
+With Beget, create the `_acme-challenge` subdomain for every base domain in the
+Beget account before the first run. The subdomains must remain in the account
+for renewals. The role does not manage DNS records.
 If Kubernetes DNS caches an earlier TXT answer, set
 `traefik_acme_dns_resolvers: ['ns1.beget.com:53', 'ns2.beget.com:53']` so
 Traefik checks the published challenge against Beget's authoritative servers.

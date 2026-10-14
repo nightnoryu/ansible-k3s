@@ -4,8 +4,6 @@ traefik_acme_dns_provider: ''
 traefik_acme_dns_resolvers: []
 traefik_acme_dns_secret: traefik-dns
 traefik_acme_dns_credentials: {}
-traefik_acme_wildcard_domain: ''
-traefik_acme_beget_challenge_subdomains: []
-traefik_acme_beget_a_records: {}
+traefik_acme_wildcard_domains: []
 traefik_acme_ca_server: https://acme-v02.api.letsencrypt.org/directory
 traefik_acme_storage_file: acme.json
