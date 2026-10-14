@@ -4,7 +4,8 @@ Ansible automation for provisioning and maintaining a secure, single-server K3s
 control plane for self-hosted workloads.
 
 The initial setup installs operating-system updates, UFW, fail2ban, and K3s.
-The separate Traefik playbook configures ACME after DNS credentials are ready.
+The separate Traefik playbook configures ACME and manages DNS credentials when
+DNS-01 is selected.
 
 ## ✨ Features
 
@@ -41,10 +42,9 @@ mise run setup-traefik-acme
 ```
 
 Every host must have a stable, unique `k3s_node_name`. Review the firewall ports
-and set `traefik_acme_email`. For DNS-01, also set the DNS provider variables and
-create the provider Secret before running the Traefik playbook. Generated
-inventory files are ignored by Git so local addresses and account details are
-not committed.
+and set `traefik_acme_email`. For DNS-01, also set the DNS provider and credential
+variables before running the Traefik playbook. Generated inventory files are
+ignored by Git so local addresses and account details are not committed.
 
 ## 🔄 Operations
 

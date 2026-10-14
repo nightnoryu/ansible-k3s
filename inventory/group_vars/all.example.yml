@@ -13,12 +13,16 @@ k3s_allowed_unsafe_sysctls:
 traefik_acme_email: 'username@example.com'
 
 # For wildcard HTTPS, select DNS-01 and set the domain/provider values.
-# DNS-01 requires provider credentials in a kube-system Secret before deployment.
-# For Beget DNS, use BEGET_USERNAME and BEGET_PASSWORD as Secret keys.
+# DNS-01 credentials become keys in the kube-system Secret named below.
+# For Beget DNS, provide BEGET_USERNAME and BEGET_PASSWORD. Keep real values
+# in ignored inventory or Ansible Vault, never in this tracked example.
 # traefik_acme_challenge: dns
 # traefik_acme_dns_provider: beget
 # traefik_acme_wildcard_domain: example.com
 # traefik_acme_dns_secret: traefik-dns
+# traefik_acme_dns_credentials:
+#   BEGET_USERNAME: your-api-username
+#   BEGET_PASSWORD: your-api-password
 # Verify staging issuance before selecting production with a separate ACME file.
 # traefik_acme_ca_server: https://acme-staging-v02.api.letsencrypt.org/directory
 # traefik_acme_storage_file: acme-staging.json

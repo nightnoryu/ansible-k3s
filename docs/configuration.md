@@ -48,6 +48,7 @@ all:
 | `k3s_allowed_unsafe_sysctls`  | Sysctls admitted by kubelet for requesting pods           |
 | `traefik_acme_email`          | Let's Encrypt account email                               |
 | `traefik_acme_dns_provider`   | Traefik/lego DNS provider code                             |
+| `traefik_acme_dns_credentials` | Provider environment variables stored in a Kubernetes Secret |
 | `traefik_acme_wildcard_domain` | Base domain covered by the wildcard certificate           |
 | `fail2ban_sshd_bantime`       | Duration of an SSH ban                                    |
 | `fail2ban_sshd_findtime`      | Time window in which SSH failures are counted             |
@@ -66,13 +67,16 @@ HTTP-01 is the default. For wildcard HTTPS, set
 `traefik_acme_challenge: dns`, set `traefik_acme_dns_provider` to the
 Traefik/lego provider for the authoritative DNS zone, and set
 `traefik_acme_wildcard_domain` to the base domain, such as `nightnoryu.com`.
-`traefik_acme_dns_secret`
-(default `traefik-dns`) names an existing Secret in `kube-system`; its keys are
-that provider's environment variables. Keep credentials outside Git. For
-Beget, use `BEGET_USERNAME` and `BEGET_PASSWORD`. Other providers require
+`traefik_acme_dns_credentials` maps the provider's environment variable names
+to their values. The role creates or updates the `kube-system` Secret named by
+`traefik_acme_dns_secret` (default `traefik-dns`) before configuring Traefik.
+For Beget, supply `BEGET_USERNAME` and `BEGET_PASSWORD`. Other providers require
 different keys; see
 [Traefik DNS-01 providers](https://doc.traefik.io/traefik/reference/install-configuration/tls/certificate-resolvers/acme/).
-The role checks that the Secret exists, references it, and does not log its contents.
+Keep credentials outside Git, preferably in Ansible Vault. Secret tasks suppress
+their output, including diffs. If credentials are in the ignored local inventory,
+restrict that file to mode `0600`. Changing a credential makes the role update
+the Secret and restart Traefik so its environment uses the new value.
 
 Start with the example staging CA and `acme-staging.json`. After verifying
 issuance, set `traefik_acme_ca_server` to
@@ -96,7 +100,7 @@ a private key. Do not run multiple replicas sharing it.
 HTTP redirects to HTTPS; HTTPS request reads allow five minutes for direct photo
 uploads. Access logs omit paths, queries and headers to avoid logging signatures.
 
-Create the DNS credential Secret before running `playbooks/setup-traefik-acme.yml`.
+Set the DNS credential variables before running `playbooks/setup-traefik-acme.yml`.
 Check issuance with staging, then switch to production and verify the wildcard
 certificate and an existing service. Keep the production ACME file on the PVC
 so Traefik can renew the certificate after restarts.
