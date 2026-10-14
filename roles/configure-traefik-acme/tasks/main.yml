@@ -7,25 +7,113 @@
       - k3s_bin_path is defined
       - traefik_acme_challenge in ['http', 'dns']
       - traefik_acme_challenge != 'dns' or traefik_acme_dns_provider | length > 0
+      - traefik_acme_challenge != 'dns' or traefik_acme_dns_credentials is mapping
+      - traefik_acme_challenge != 'dns' or traefik_acme_dns_credentials | length > 0
+      - >-
+        traefik_acme_challenge != 'dns' or traefik_acme_dns_provider != 'beget' or
+        (traefik_acme_dns_credentials.BEGET_USERNAME | default('') | length > 0 and
+         traefik_acme_dns_credentials.BEGET_PASSWORD | default('') | length > 0)
       - traefik_acme_challenge != 'dns' or traefik_acme_wildcard_domain is match('^[a-zA-Z0-9-]+([.][a-zA-Z0-9-]+)+$')
       - traefik_acme_storage_file is match('^[a-zA-Z0-9_-]+[.]json$')
-    fail_msg: Define the ACME email, K3s binary, DNS provider, and wildcard base domain.
+    fail_msg: Define the ACME email, K3s binary, DNS provider, credentials, and wildcard base domain.
 
-- name: Check DNS provider credential Secret
+- name: Encode DNS provider credentials for Kubernetes
+  ansible.builtin.set_fact:
+    traefik_acme_dns_secret_data: >-
+      {{ traefik_acme_dns_secret_data | default({}) |
+         combine({ item.key: item.value | b64encode }) }}
+  loop: "{{ traefik_acme_dns_credentials | dict2items }}"
+  no_log: true
+  when: traefik_acme_challenge == 'dns'
+
+- name: Read DNS provider credential Secret
   ansible.builtin.command:
-    cmd: >-
-      {{ k3s_bin_path }} kubectl -n kube-system get secret
-      {{ traefik_acme_dns_secret }}
+    argv:
+      - "{{ k3s_bin_path }}"
+      - kubectl
+      - -n
+      - kube-system
+      - get
+      - secret
+      - "{{ traefik_acme_dns_secret }}"
+      - --ignore-not-found
+      - -o
+      - json
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: traefik_acme_dns_existing_secret
   changed_when: false
+  no_log: true
   when: traefik_acme_challenge == 'dns' and not ansible_check_mode
+
+- name: Create DNS provider credential Secret
+  ansible.builtin.command:
+    argv:
+      - "{{ k3s_bin_path }}"
+      - kubectl
+      - create
+      - -f
+      - -
+    stdin: >-
+      {{ {'apiVersion': 'v1', 'kind': 'Secret',
+          'metadata': {'name': traefik_acme_dns_secret, 'namespace': 'kube-system'},
+          'type': 'Opaque', 'data': traefik_acme_dns_secret_data} | to_json }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: traefik_acme_dns_secret_created
+  changed_when: true
+  no_log: true
+  when:
+    - traefik_acme_challenge == 'dns'
+    - not ansible_check_mode
+    - traefik_acme_dns_existing_secret.stdout | length == 0
+
+- name: Update DNS provider credential Secret
+  ansible.builtin.command:
+    argv:
+      - "{{ k3s_bin_path }}"
+      - kubectl
+      - replace
+      - -f
+      - -
+    stdin: >-
+      {{ {'apiVersion': 'v1', 'kind': 'Secret',
+          'metadata': {'name': traefik_acme_dns_secret, 'namespace': 'kube-system',
+                       'resourceVersion':
+                         (traefik_acme_dns_existing_secret.stdout | from_json).metadata.resourceVersion,
+                       'labels':
+                         (traefik_acme_dns_existing_secret.stdout | from_json).metadata.labels | default({}),
+                       'annotations':
+                         (traefik_acme_dns_existing_secret.stdout | from_json).metadata.annotations | default({})},
+          'type': 'Opaque', 'data': traefik_acme_dns_secret_data} | to_json }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: traefik_acme_dns_secret_updated
+  changed_when: true
+  no_log: true
+  when:
+    - traefik_acme_challenge == 'dns'
+    - not ansible_check_mode
+    - traefik_acme_dns_existing_secret.stdout | length > 0
+    - (traefik_acme_dns_existing_secret.stdout | from_json).data | default({}) != traefik_acme_dns_secret_data
 
 - name: Create HelmChartConfig
   ansible.builtin.template:
     src: traefik-config.yml
     dest: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
     mode: '0644'
+
+- name: Restart Traefik after DNS credential change
+  ansible.builtin.command:
+    cmd: >-
+      {{ k3s_bin_path }} kubectl -n kube-system rollout restart deployment/traefik
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: true
+  when:
+    - traefik_acme_challenge == 'dns'
+    - not ansible_check_mode
+    - traefik_acme_dns_secret_created is changed or traefik_acme_dns_secret_updated is changed
 
 - name: Wait for Traefik to load the requested ACME settings
   ansible.builtin.command:

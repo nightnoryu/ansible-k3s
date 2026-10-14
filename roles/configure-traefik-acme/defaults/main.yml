@@ -2,6 +2,7 @@
 traefik_acme_challenge: http
 traefik_acme_dns_provider: ''
 traefik_acme_dns_secret: traefik-dns
+traefik_acme_dns_credentials: {}
 traefik_acme_wildcard_domain: ''
 traefik_acme_ca_server: https://acme-v02.api.letsencrypt.org/directory
 traefik_acme_storage_file: acme.json
