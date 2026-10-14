@@ -7,14 +7,83 @@
       - k3s_bin_path is defined
       - traefik_acme_challenge in ['http', 'dns']
       - traefik_acme_challenge != 'dns' or traefik_acme_dns_provider | length > 0
+      - traefik_acme_challenge != 'dns' or traefik_acme_wildcard_domain is match('^[a-zA-Z0-9-]+([.][a-zA-Z0-9-]+)+$')
       - traefik_acme_storage_file is match('^[a-zA-Z0-9_-]+[.]json$')
-    fail_msg: Define traefik_acme_email and k3s_bin_path before configuring Traefik.
+    fail_msg: Define the ACME email, K3s binary, DNS provider, and wildcard base domain.
+
+- name: Check DNS provider credential Secret
+  ansible.builtin.command:
+    cmd: >-
+      {{ k3s_bin_path }} kubectl -n kube-system get secret
+      {{ traefik_acme_dns_secret }}
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false
+  when: traefik_acme_challenge == 'dns' and not ansible_check_mode
 
 - name: Create HelmChartConfig
   ansible.builtin.template:
     src: traefik-config.yml
     dest: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
     mode: '0644'
+
+- name: Wait for Traefik to load the requested ACME settings
+  ansible.builtin.command:
+    argv:
+      - "{{ k3s_bin_path }}"
+      - kubectl
+      - -n
+      - kube-system
+      - get
+      - deployment
+      - traefik
+      - -o
+      - 'jsonpath={.spec.strategy.type}{" "}{.spec.template.spec.containers[0].args}'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: traefik_deployment_args
+  until: >-
+    traefik_deployment_args.rc == 0 and
+    'Recreate' in traefik_deployment_args.stdout and
+    ('--certificatesresolvers.letsencrypt.acme.email=' ~ traefik_acme_email)
+    in traefik_deployment_args.stdout and
+    ('--certificatesresolvers.letsencrypt.acme.storage=/data/' ~ traefik_acme_storage_file)
+    in traefik_deployment_args.stdout and
+    ('--certificatesresolvers.letsencrypt.acme.caserver=' ~ traefik_acme_ca_server)
+    in traefik_deployment_args.stdout and
+    traefik_acme_challenge_argument in traefik_deployment_args.stdout
+  retries: 30
+  delay: 5
+  changed_when: false
+  vars:
+    traefik_acme_challenge_argument: >-
+      {{ '--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=' ~ traefik_acme_dns_provider
+         if traefik_acme_challenge == 'dns'
+         else '--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web' }}
+  when: not ansible_check_mode
+
+- name: Wait for the default wildcard TLS store
+  ansible.builtin.command:
+    argv:
+      - "{{ k3s_bin_path }}"
+      - kubectl
+      - -n
+      - kube-system
+      - get
+      - tlsstore
+      - default
+      - -o
+      - 'jsonpath={.spec.defaultGeneratedCert.domain.main}'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: traefik_tls_store
+  until: >-
+    traefik_tls_store.rc == 0 and
+    traefik_tls_store.stdout == '*.' ~ traefik_acme_wildcard_domain
+  retries: 30
+  delay: 5
+  changed_when: false
+  when: traefik_acme_challenge == 'dns' and not ansible_check_mode
 
 - name: Wait for traefik rollout
   ansible.builtin.command:

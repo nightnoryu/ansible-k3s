@@ -6,6 +6,10 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |-
+    deployment:
+      replicas: 1
+    updateStrategy:
+      type: Recreate
     persistence:
       enabled: true
       name: data
@@ -28,6 +32,12 @@ spec:
     envFrom:
       - secretRef:
           name: {{ traefik_acme_dns_secret }}
+    tlsStore:
+      default:
+        defaultGeneratedCert:
+          resolver: letsencrypt
+          domain:
+            main: "*.{{ traefik_acme_wildcard_domain }}"
 {% endif %}
     logs:
       access:
